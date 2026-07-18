@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, UUID, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,6 +11,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.customer import Customer
     from app.models.order import Order
+    from app.models.resolution import Resolution
 
 
 class TicketPriority(str, enum.Enum):
@@ -117,16 +118,19 @@ class Ticket(Base):
     # Relationships
     # -------------------------------------------------------------------------
 
-    # TODO: Add `tickets: Mapped[List["Ticket"]]` relationship to Customer model
-    #       with cascade="all, delete-orphan" and back_populates="customer"
     customer: Mapped["Customer"] = relationship(
         "Customer",
+        back_populates="tickets",
         foreign_keys=[customer_id],
     )
 
-    # TODO: Add `tickets: Mapped[List["Ticket"]]` relationship to Order model
-    #       with back_populates="order" when Order model is updated
     order: Mapped[Optional["Order"]] = relationship(
         "Order",
+        back_populates="tickets",
         foreign_keys=[order_id],
+    )
+    resolutions: Mapped[List["Resolution"]] = relationship(
+        "Resolution",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
     )

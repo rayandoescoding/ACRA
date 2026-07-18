@@ -98,10 +98,8 @@ class Resolution(Base):
     # Relationships
     # -------------------------------------------------------------------------
 
-    # TODO: Add `resolutions: Mapped[List["Resolution"]]` relationship to Ticket
-    #       model with cascade="all, delete-orphan" and back_populates="ticket"
-    #       when Ticket model is updated.
     ticket: Mapped["Ticket"] = relationship(
         "Ticket",
+        back_populates="resolutions",
         foreign_keys=[ticket_id],
     )

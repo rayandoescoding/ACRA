@@ -11,6 +11,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.account import Account
     from app.models.order import Order
+    from app.models.ticket import Ticket
 
 
 class CustomerTier(str, enum.Enum):
@@ -62,6 +63,11 @@ class Customer(Base):
     )
     orders: Mapped[List["Order"]] = relationship(
         "Order",
+        back_populates="customer",
+        cascade="all, delete-orphan",
+    )
+    tickets: Mapped[List["Ticket"]] = relationship(
+        "Ticket",
         back_populates="customer",
         cascade="all, delete-orphan",
     )
