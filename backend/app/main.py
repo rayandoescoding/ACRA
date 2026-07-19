@@ -9,6 +9,8 @@ from app.api.router import api_router as root_router
 from app.api.v1.router import api_router as v1_router
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.database import async_session_factory
+from app.services.auth_service import AuthService
 
 # Setup standard application logging with JSON Formatter
 setup_logging()
@@ -33,6 +35,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "port": settings.PORT,
         },
     )
+    async with async_session_factory() as session:
+        bootstrap_created = await AuthService(session).ensure_bootstrap_admin(
+            email=settings.AUTH_BOOTSTRAP_ADMIN_EMAIL,
+            password=settings.AUTH_BOOTSTRAP_ADMIN_PASSWORD,
+        )
+    if bootstrap_created:
+        logger.info("Initial administrator account created.")
     yield
     # Structured shutdown log
     logger.info(
@@ -66,5 +75,4 @@ app.add_middleware(
 # Mount API routers
 app.include_router(v1_router, prefix="/api/v1")
 app.include_router(root_router)
-
 

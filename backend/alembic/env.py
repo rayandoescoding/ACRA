@@ -15,6 +15,7 @@ import app.models.customer  # noqa: F401
 import app.models.order  # noqa: F401
 import app.models.resolution  # noqa: F401
 import app.models.ticket  # noqa: F401
+import app.models.user  # noqa: F401
 
 config = context.config
 
