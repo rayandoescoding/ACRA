@@ -1,6 +1,8 @@
 """Orchestration of the complete ticket-resolution agent pipeline."""
 
 from dataclasses import dataclass, replace
+from time import perf_counter
+from typing import Awaitable, Callable, TypeVar
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +29,12 @@ from app.agents.priority_agent import (
 from app.agents.resolution_agent import ResolutionAgent
 from app.agents.resolution_models import ResolutionInput, ResolutionResult
 from app.models.ticket import Ticket
+from app.observability.logger import PipelineEventLogger, pipeline_logger
+from app.observability.metrics import PipelineMetrics, pipeline_metrics
+from app.observability.tracing import pipeline_trace
+
+
+ResultT = TypeVar("ResultT")
 
 
 class ProcessingTicketNotFoundError(LookupError):
@@ -62,6 +70,8 @@ class TicketProcessingOrchestrator:
         planning_agent: PlanningAgent | None = None,
         guardrail_agent: GuardrailAgent | None = None,
         resolution_agent: ResolutionAgent | None = None,
+        metrics: PipelineMetrics | None = None,
+        event_logger: PipelineEventLogger | None = None,
     ) -> None:
         self._session = session
         self._classification_agent = classification_agent or ClassificationAgent()
@@ -70,6 +80,8 @@ class TicketProcessingOrchestrator:
         self._planning_agent = planning_agent or PlanningAgent()
         self._guardrail_agent = guardrail_agent or GuardrailAgent()
         self._resolution_agent = resolution_agent or ResolutionAgent()
+        self._metrics = metrics or pipeline_metrics
+        self._event_logger = event_logger or pipeline_logger
 
     async def process_ticket(
         self,
@@ -78,54 +90,158 @@ class TicketProcessingOrchestrator:
         sla_status: SLAStatus = SLAStatus.ON_TRACK,
     ) -> TicketProcessingResult:
         """Run classification through resolution and commit supported ticket updates."""
-        ticket = await self._session.get(Ticket, ticket_id)
-        if ticket is None:
-            raise ProcessingTicketNotFoundError(ticket_id)
-
-        classification = await self._classification_agent.classify_and_store(
-            self._session,
-            ticket,
-        )
-        context = (await self._context_agent.execute(ticket.id)).value
-        priority = await self._priority_agent.execute(
-            PriorityInput(
-                sentiment=self._sentiment_from_context(context),
-                intent=self._intent_from_context(context),
-                customer_tier=context.customer.tier,
-                sla_status=sla_status,
+        async with pipeline_trace() as trace:
+            self._event_logger.info(
+                "pipeline_started",
+                correlation_id=trace.correlation_id,
             )
-        )
-        ticket.priority = priority.value.ticket_priority
-        await self._session.flush()
-        planning_context = replace(
-            context,
-            ticket=replace(context.ticket, priority=ticket.priority),
-            priority=ticket.priority,
-        )
-        plan = await self._planning_agent.execute(planning_context)
-        guardrail = await self._guardrail_agent.execute(
-            GuardrailInput(plan=plan.value, context=planning_context)
-        )
-        resolution = await self._resolution_agent.execute(
-            ResolutionInput(
-                plan=plan.value,
-                guardrail=guardrail.value,
+            try:
+                ticket = await self._session.get(Ticket, ticket_id)
+                if ticket is None:
+                    raise ProcessingTicketNotFoundError(ticket_id)
+
+                classification = await self._observe_agent(
+                    "classification",
+                    lambda: self._classification_agent.classify_and_store(
+                        self._session,
+                        ticket,
+                    ),
+                )
+                self._event_logger.info(
+                    "classification_completed",
+                    correlation_id=trace.correlation_id,
+                    sentiment=classification.value.sentiment.value,
+                    intent=classification.value.intent.value,
+                    used_fallback=classification.used_fallback,
+                )
+                context = (
+                    await self._observe_agent(
+                        "context_retrieval",
+                        lambda: self._context_agent.execute(ticket.id),
+                    )
+                ).value
+                priority = await self._observe_agent(
+                    "priority",
+                    lambda: self._priority_agent.execute(
+                        PriorityInput(
+                            sentiment=self._sentiment_from_context(context),
+                            intent=self._intent_from_context(context),
+                            customer_tier=context.customer.tier,
+                            sla_status=sla_status,
+                        )
+                    ),
+                )
+                self._event_logger.info(
+                    "priority_completed",
+                    correlation_id=trace.correlation_id,
+                    priority_level=priority.value.level.value,
+                    priority_score=priority.value.score,
+                )
+                ticket.priority = priority.value.ticket_priority
+                await self._session.flush()
+                planning_context = replace(
+                    context,
+                    ticket=replace(context.ticket, priority=ticket.priority),
+                    priority=ticket.priority,
+                )
+                plan = await self._observe_agent(
+                    "planning",
+                    lambda: self._planning_agent.execute(planning_context),
+                )
+                self._event_logger.info(
+                    "planning_completed",
+                    correlation_id=trace.correlation_id,
+                    planning_action=plan.value.action.value,
+                    requires_human=plan.value.requires_human,
+                )
+                guardrail = await self._observe_agent(
+                    "guardrails",
+                    lambda: self._guardrail_agent.execute(
+                        GuardrailInput(plan=plan.value, context=planning_context)
+                    ),
+                )
+                self._event_logger.info(
+                    "guardrails_completed",
+                    correlation_id=trace.correlation_id,
+                    outcome="passed" if guardrail.value.passed else "failed",
+                    requires_human=guardrail.value.requires_human,
+                    risk_score=guardrail.value.risk_score,
+                )
+                resolution = await self._observe_agent(
+                    "resolution",
+                    lambda: self._resolution_agent.execute(
+                        ResolutionInput(
+                            plan=plan.value,
+                            guardrail=guardrail.value,
+                            context=planning_context,
+                        )
+                    ),
+                )
+                self._event_logger.info(
+                    "resolution_completed",
+                    correlation_id=trace.correlation_id,
+                    outcome=resolution.value.outcome.value,
+                    requires_human=guardrail.value.requires_human,
+                )
+
+                await self._session.commit()
+                await self._session.refresh(ticket)
+            except Exception as exc:
+                await self._metrics.record_pipeline_completion(
+                    succeeded=False,
+                    requires_human=False,
+                )
+                self._event_logger.info(
+                    "pipeline_failed",
+                    correlation_id=trace.correlation_id,
+                    outcome=type(exc).__name__,
+                    succeeded=False,
+                )
+                raise
+
+            await self._metrics.record_pipeline_completion(
+                succeeded=True,
+                requires_human=guardrail.value.requires_human,
+            )
+            self._event_logger.info(
+                "pipeline_completed",
+                correlation_id=trace.correlation_id,
+                duration_ms=round(trace.elapsed_ms(), 2),
+                succeeded=True,
+                requires_human=guardrail.value.requires_human,
+            )
+            return TicketProcessingResult(
+                ticket_id=ticket.id,
+                classification=classification,
+                priority=priority,
                 context=planning_context,
+                plan=plan,
+                guardrail=guardrail,
+                resolution=resolution,
             )
-        )
 
-        await self._session.commit()
-        await self._session.refresh(ticket)
-
-        return TicketProcessingResult(
-            ticket_id=ticket.id,
-            classification=classification,
-            priority=priority,
-            context=planning_context,
-            plan=plan,
-            guardrail=guardrail,
-            resolution=resolution,
+    async def _observe_agent(
+        self,
+        agent: str,
+        operation: Callable[[], Awaitable[ResultT]],
+    ) -> ResultT:
+        """Time an agent invocation while preserving its result or exception."""
+        started_at = perf_counter()
+        try:
+            result = await operation()
+        except Exception:
+            await self._metrics.record_agent_execution(
+                agent,
+                duration_ms=(perf_counter() - started_at) * 1_000,
+                succeeded=False,
+            )
+            raise
+        await self._metrics.record_agent_execution(
+            agent,
+            duration_ms=(perf_counter() - started_at) * 1_000,
+            succeeded=True,
         )
+        return result
 
     @staticmethod
     def _sentiment_from_context(context: ContextPackage) -> SentimentLabel:
