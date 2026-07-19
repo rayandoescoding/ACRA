@@ -12,6 +12,7 @@ from app.schemas.auth import (
     AuthenticatedUserResponse,
     LoginRequest,
 )
+from app.schemas.ticket_processing import TicketProcessingResponse
 
 __all__ = [
     "AccountCreate",
@@ -31,5 +32,6 @@ __all__ = [
     "ResolutionUpdate",
     "TicketCreate",
     "TicketResponse",
+    "TicketProcessingResponse",
     "TicketUpdate",
 ]

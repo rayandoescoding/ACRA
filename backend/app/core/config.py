@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     AUTH_BOOTSTRAP_ADMIN_EMAIL: str | None = None
     AUTH_BOOTSTRAP_ADMIN_PASSWORD: str | None = None
+    DEMO_SEED_ENABLED: bool = False
 
     # Allow configuration values to be read from a .env file if it exists
     model_config = SettingsConfigDict(

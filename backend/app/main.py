@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.database import async_session_factory
 from app.services.auth_service import AuthService
+from app.services.demo_seed_service import DemoSeedService
 
 # Setup standard application logging with JSON Formatter
 setup_logging()
@@ -42,6 +43,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
     if bootstrap_created:
         logger.info("Initial administrator account created.")
+    if settings.DEMO_SEED_ENABLED:
+        async with async_session_factory() as session:
+            demo_seed_result = await DemoSeedService(session).seed()
+        logger.info(
+            "Demo dataset seed completed.",
+            extra={
+                "customers_created": demo_seed_result.customers_created,
+                "accounts_created": demo_seed_result.accounts_created,
+                "orders_created": demo_seed_result.orders_created,
+                "tickets_created": demo_seed_result.tickets_created,
+            },
+        )
     yield
     # Structured shutdown log
     logger.info(
@@ -75,4 +88,3 @@ app.add_middleware(
 # Mount API routers
 app.include_router(v1_router, prefix="/api/v1")
 app.include_router(root_router)
-

@@ -10,6 +10,11 @@ from app.database import get_db
 from app.models.ticket import TicketStatus
 from app.models.user import User, UserRole
 from app.schemas.ticket import TicketCreate, TicketResponse
+from app.schemas.ticket_processing import TicketProcessingResponse
+from app.services.ticket_processing_service import (
+    TicketProcessingNotFoundError,
+    TicketProcessingService,
+)
 from app.services.ticket_service import TicketNotFoundError, TicketService
 
 
@@ -31,6 +36,29 @@ async def create_ticket(
 ) -> TicketResponse:
     """Create a support ticket through the ticket service."""
     return await TicketService(db).create_ticket(ticket_data)
+
+
+@router.post(
+    "/{ticket_id}/process",
+    response_model=TicketProcessingResponse,
+    status_code=http_status.HTTP_200_OK,
+    summary="Process a support ticket through the AI pipeline",
+)
+async def process_ticket(
+    ticket_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
+) -> TicketProcessingResponse:
+    """Run the existing orchestration pipeline and persist its final resolution."""
+    try:
+        return await TicketProcessingService(db).process_ticket(ticket_id)
+    except TicketProcessingNotFoundError as exc:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get(
