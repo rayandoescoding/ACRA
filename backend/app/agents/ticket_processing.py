@@ -24,6 +24,8 @@ from app.agents.priority_agent import (
     PriorityInput,
     SLAStatus,
 )
+from app.agents.resolution_agent import ResolutionAgent
+from app.agents.resolution_models import ResolutionInput, ResolutionResult
 from app.models.ticket import Ticket
 
 
@@ -45,10 +47,11 @@ class TicketProcessingResult:
     context: ContextPackage | None = None
     plan: AgentResult[ExecutionPlan] | None = None
     guardrail: AgentResult[GuardrailResult] | None = None
+    resolution: AgentResult[ResolutionResult] | None = None
 
 
 class TicketProcessingWorkflow:
-    """Runs classification, context, priority, planning, then guardrails in order."""
+    """Runs classification, context, priority, planning, guardrails, then resolution."""
 
     def __init__(
         self,
@@ -58,6 +61,7 @@ class TicketProcessingWorkflow:
         priority_agent: PriorityAgent | None = None,
         planning_agent: PlanningAgent | None = None,
         guardrail_agent: GuardrailAgent | None = None,
+        resolution_agent: ResolutionAgent | None = None,
     ) -> None:
         self._session = session
         self._classification_agent = classification_agent or ClassificationAgent()
@@ -65,6 +69,7 @@ class TicketProcessingWorkflow:
         self._priority_agent = priority_agent or PriorityAgent()
         self._planning_agent = planning_agent or PlanningAgent()
         self._guardrail_agent = guardrail_agent or GuardrailAgent()
+        self._resolution_agent = resolution_agent or ResolutionAgent()
 
     async def process_ticket(
         self,
@@ -101,6 +106,13 @@ class TicketProcessingWorkflow:
         guardrail = await self._guardrail_agent.execute(
             GuardrailInput(plan=plan.value, context=planning_context)
         )
+        resolution = await self._resolution_agent.execute(
+            ResolutionInput(
+                plan=plan.value,
+                guardrail=guardrail.value,
+                context=planning_context,
+            )
+        )
 
         await self._session.commit()
         await self._session.refresh(ticket)
@@ -112,6 +124,7 @@ class TicketProcessingWorkflow:
             context=planning_context,
             plan=plan,
             guardrail=guardrail,
+            resolution=resolution,
         )
 
     @staticmethod
