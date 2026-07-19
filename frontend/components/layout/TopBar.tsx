@@ -1,3 +1,5 @@
+import { LogoutButton } from "@/components/auth/LogoutButton";
+
 type Metric = {
   label: string;
   value: string;
@@ -36,6 +38,7 @@ export function TopBar({ metrics = defaultMetrics }: { metrics?: Metric[] }) {
             </div>
           ))}
         </dl>
+        <LogoutButton />
       </div>
     </header>
   );

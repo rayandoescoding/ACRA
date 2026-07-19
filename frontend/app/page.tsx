@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { GuardrailStamp } from "@/components/GuardrailStamp";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { LaneBadge } from "@/components/ui/LaneBadge";
@@ -35,7 +36,8 @@ const trace = [
 
 export default function DashboardPage() {
   return (
-    <PageLayout activeRoute="dashboard">
+    <AuthGuard>
+      <PageLayout activeRoute="dashboard">
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(380px,1.05fr)]">
         <section aria-labelledby="priority-lanes-heading">
           <div className="mb-4 flex items-end justify-between">
@@ -103,6 +105,7 @@ export default function DashboardPage() {
           </div>
         </section>
       </div>
-    </PageLayout>
+      </PageLayout>
+    </AuthGuard>
   );
 }

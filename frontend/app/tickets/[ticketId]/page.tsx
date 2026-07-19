@@ -1,3 +1,4 @@
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { GuardrailStamp } from "@/components/GuardrailStamp";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { LaneBadge } from "@/components/ui/LaneBadge";
@@ -5,7 +6,8 @@ import { SentimentBar } from "@/components/ui/SentimentBar";
 
 export default function TicketDetailPage() {
   return (
-    <PageLayout activeRoute="ticket">
+    <AuthGuard>
+      <PageLayout activeRoute="ticket">
       <div className="mx-auto max-w-5xl">
         <p className="font-mono text-[10px] tracking-[0.14em] text-text-faint">TICKET / DEMO-001 / STATIC FOUNDATION DATA</p>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4 border-b border-hairline pb-5">
@@ -33,6 +35,7 @@ export default function TicketDetailPage() {
           </section>
         </div>
       </div>
-    </PageLayout>
+      </PageLayout>
+    </AuthGuard>
   );
 }
