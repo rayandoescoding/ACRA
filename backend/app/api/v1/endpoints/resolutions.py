@@ -5,7 +5,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies.auth import require_roles
 from app.database import get_db
+from app.models.user import User, UserRole
 from app.schemas.resolution import ResolutionCreate, ResolutionResponse
 from app.services.resolution_service import ResolutionNotFoundError, ResolutionService
 
@@ -22,6 +24,9 @@ router = APIRouter(prefix="/resolutions", tags=["resolutions"])
 async def create_resolution(
     resolution_data: ResolutionCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> ResolutionResponse:
     """Create a resolution proposal through the resolution service."""
     return await ResolutionService(db).create_resolution(resolution_data)
@@ -37,6 +42,9 @@ async def list_resolutions(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1_000),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> list[ResolutionResponse]:
     """List resolution proposals through the resolution service."""
     return await ResolutionService(db).list_resolutions(offset=offset, limit=limit)
@@ -51,6 +59,9 @@ async def list_resolutions(
 async def get_resolution(
     resolution_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> ResolutionResponse:
     """Get a resolution proposal by ID through the resolution service."""
     try:
@@ -71,6 +82,7 @@ async def get_resolution(
 async def approve_resolution(
     resolution_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ) -> ResolutionResponse:
     """Approve a resolution proposal through the resolution service."""
     try:
@@ -91,6 +103,7 @@ async def approve_resolution(
 async def reject_resolution(
     resolution_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ) -> ResolutionResponse:
     """Reject a resolution proposal through the resolution service."""
     try:

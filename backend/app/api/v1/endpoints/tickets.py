@@ -5,8 +5,10 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies.auth import require_roles
 from app.database import get_db
 from app.models.ticket import TicketStatus
+from app.models.user import User, UserRole
 from app.schemas.ticket import TicketCreate, TicketResponse
 from app.services.ticket_service import TicketNotFoundError, TicketService
 
@@ -23,6 +25,9 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 async def create_ticket(
     ticket_data: TicketCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> TicketResponse:
     """Create a support ticket through the ticket service."""
     return await TicketService(db).create_ticket(ticket_data)
@@ -38,6 +43,9 @@ async def list_tickets(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1_000),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> list[TicketResponse]:
     """List support tickets through the ticket service."""
     return await TicketService(db).list_tickets(offset=offset, limit=limit)
@@ -52,6 +60,9 @@ async def list_tickets(
 async def get_ticket(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> TicketResponse:
     """Get a support ticket by ID through the ticket service."""
     try:
@@ -73,6 +84,9 @@ async def update_ticket_status(
     ticket_id: UUID,
     status: TicketStatus = Body(embed=True),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.SUPPORT_AGENT)
+    ),
 ) -> TicketResponse:
     """Update a ticket lifecycle status through the ticket service."""
     try:
