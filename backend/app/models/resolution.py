@@ -34,18 +34,12 @@ class Resolution(Base):
 
     __tablename__ = "resolutions"
 
-    # -------------------------------------------------------------------------
-    # Primary Key
-    # -------------------------------------------------------------------------
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
 
-    # -------------------------------------------------------------------------
-    # Foreign Keys
-    # -------------------------------------------------------------------------
     ticket_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tickets.id", ondelete="CASCADE"),
@@ -53,50 +47,47 @@ class Resolution(Base):
         index=True,
     )
 
-    # -------------------------------------------------------------------------
-    # Core Fields
-    # -------------------------------------------------------------------------
     generated_response: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
         comment="Full AI-generated response text proposed for the customer.",
     )
+
     confidence_score: Mapped[Optional[float]] = mapped_column(
         Float,
         nullable=True,
         comment="Model confidence in the generated response, range 0.0 – 1.0.",
     )
+
     escalation_required: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
         nullable=False,
         comment="True when the AI determines a human agent must handle the ticket.",
     )
+
     resolution_status: Mapped[ResolutionStatus] = mapped_column(
-        Enum(ResolutionStatus),
+        Enum(
+            ResolutionStatus,
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
         default=ResolutionStatus.PENDING,
         nullable=False,
         comment="Approval state of the resolution in the review workflow.",
     )
+
     model_name: Mapped[Optional[str]] = mapped_column(
         String(150),
         nullable=True,
         comment="Identifier of the AI model that generated this resolution.",
     )
 
-    # -------------------------------------------------------------------------
-    # Timestamps
-    # -------------------------------------------------------------------------
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
         default=datetime.utcnow,
         nullable=False,
     )
-
-    # -------------------------------------------------------------------------
-    # Relationships
-    # -------------------------------------------------------------------------
 
     ticket: Mapped["Ticket"] = relationship(
         "Ticket",

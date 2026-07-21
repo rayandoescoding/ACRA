@@ -40,10 +40,13 @@ class Account(Base):
     )
     plan_type: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[AccountStatus] = mapped_column(
-        Enum(AccountStatus),
-        default=AccountStatus.ACTIVE,
-        nullable=False,
-    )
+    Enum(
+        AccountStatus,
+        values_callable=lambda enum: [item.value for item in enum],
+    ),
+    default=AccountStatus.ACTIVE,
+    nullable=False,
+)
     signup_date: Mapped[date] = mapped_column(Date, nullable=False)
     billing_cycle: Mapped[str] = mapped_column(String(50), nullable=False)
 

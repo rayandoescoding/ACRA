@@ -65,6 +65,7 @@ class Ticket(Base):
         nullable=False,
         index=True,
     )
+
     order_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("orders.id", ondelete="SET NULL"),
@@ -75,27 +76,56 @@ class Ticket(Base):
     # -------------------------------------------------------------------------
     # Core Fields
     # -------------------------------------------------------------------------
-    subject: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    subject: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    description: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    category: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+    )
 
     priority: Mapped[TicketPriority] = mapped_column(
-        Enum(TicketPriority),
+        Enum(
+            TicketPriority,
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
         default=TicketPriority.MEDIUM,
         nullable=False,
     )
+
     status: Mapped[TicketStatus] = mapped_column(
-        Enum(TicketStatus),
+        Enum(
+            TicketStatus,
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+        ),
         default=TicketStatus.OPEN,
         nullable=False,
     )
 
     # -------------------------------------------------------------------------
-    # AI-Enriched Fields (populated by the AI agent pipeline, not at creation)
+    # AI-Enriched Fields
     # -------------------------------------------------------------------------
-    sentiment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    intent: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    ai_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    sentiment: Mapped[Optional[str]] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    intent: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    ai_summary: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
 
     # -------------------------------------------------------------------------
     # Timestamps
@@ -106,6 +136,7 @@ class Ticket(Base):
         default=datetime.utcnow,
         nullable=False,
     )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
@@ -117,7 +148,6 @@ class Ticket(Base):
     # -------------------------------------------------------------------------
     # Relationships
     # -------------------------------------------------------------------------
-
     customer: Mapped["Customer"] = relationship(
         "Customer",
         back_populates="tickets",
@@ -129,6 +159,7 @@ class Ticket(Base):
         back_populates="tickets",
         foreign_keys=[order_id],
     )
+
     resolutions: Mapped[List["Resolution"]] = relationship(
         "Resolution",
         back_populates="ticket",
