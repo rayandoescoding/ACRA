@@ -27,29 +27,42 @@ class User(Base):
         primary_key=True,
         default=uuid.uuid4,
     )
+
     email: Mapped[str] = mapped_column(
         String(255),
         unique=True,
         index=True,
         nullable=False,
     )
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="userrole"),
+        Enum(
+            UserRole,
+            name="userrole",
+            values_callable=lambda enum: [item.value for item in enum],
+        ),
         default=UserRole.SUPPORT_AGENT,
         nullable=False,
     )
+
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         default=True,
         nullable=False,
     )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
         default=datetime.utcnow,
         nullable=False,
     )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
