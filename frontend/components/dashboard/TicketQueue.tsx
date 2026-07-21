@@ -7,8 +7,8 @@ import { priorityToLane, sentimentToScore, type TicketLane } from "@/lib/ticket-
 import type { Ticket } from "@/models/ticket";
 import { TicketService } from "@/services/ticket-service";
 import { LaneBadge } from "@/components/ui/LaneBadge";
-import { LoadingState } from "@/components/ui/LoadingState";
 import { SentimentBar } from "@/components/ui/SentimentBar";
+import { TicketQueueSkeleton } from "@/components/ui/TicketQueueSkeleton";
 
 const laneOrder: TicketLane[] = ["critical", "high", "standard"];
 
@@ -36,11 +36,11 @@ export function TicketQueue() {
     };
   }, []);
 
-  if (isLoading) return <LoadingState label="LOADING TICKET QUEUE" />;
+  if (isLoading) return <TicketQueueSkeleton />;
 
   if (error) {
     return (
-      <section className="border border-coral bg-panel p-6" aria-labelledby="ticket-error-heading">
+      <section className="border border-coral bg-panel p-6 shadow-[0_8px_30px_rgba(0,0,0,0.16)] sm:p-7" aria-labelledby="ticket-error-heading">
         <p className="font-mono text-[10px] tracking-[0.14em] text-coral">QUEUE CONNECTION ERROR</p>
         <h2 id="ticket-error-heading" className="mt-2 text-lg font-semibold text-text">Ticket feed unavailable</h2>
         <p className="mt-2 text-sm leading-6 text-text-muted">{error}</p>
@@ -50,7 +50,7 @@ export function TicketQueue() {
 
   if (tickets.length === 0) {
     return (
-      <section className="border border-hairline bg-panel p-6" aria-labelledby="ticket-empty-heading">
+      <section className="border border-hairline bg-panel p-6 shadow-[0_8px_30px_rgba(0,0,0,0.16)] sm:p-7" aria-labelledby="ticket-empty-heading">
         <p className="font-mono text-[10px] tracking-[0.14em] text-text-faint">INBOUND QUEUE</p>
         <h2 id="ticket-empty-heading" className="mt-2 text-lg font-semibold text-text">No tickets available</h2>
         <p className="mt-2 text-sm leading-6 text-text-muted">The authenticated ticket queue has no records at this time.</p>
@@ -85,7 +85,7 @@ export function TicketQueue() {
                   <Link
                     key={ticket.id}
                     href={`/tickets/${ticket.id}`}
-                    className="block border border-hairline bg-panel p-4 transition-colors hover:border-hairline-bright hover:bg-panel-raised"
+                    className="block border border-hairline bg-panel p-4 transition-colors duration-200 hover:-translate-y-px hover:border-hairline-bright hover:bg-panel-raised focus-visible:border-blue-signal"
                   >
                     <p className="text-sm font-medium text-text">{ticket.subject}</p>
                     <div className="mt-3 flex items-center justify-between gap-3">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ibmPlexMono, ibmPlexSans } from "@/lib/fonts";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 
 import "./globals.css";
 
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} font-sans`}>
         {children}
+        <ToastProvider />
       </body>
     </html>
   );

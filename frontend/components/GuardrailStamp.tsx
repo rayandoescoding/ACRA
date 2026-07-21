@@ -11,7 +11,7 @@ export function GuardrailStamp({ passed, visible }: GuardrailStampProps) {
 
   return (
     <div
-      className={`inline-flex max-w-64 flex-col border-2 px-3 py-2 ${tone} ${
+      className={`inline-flex max-w-64 flex-col border-2 px-3 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.18)] ${tone} ${
         visible ? "guardrail-stamp-enter" : "guardrail-stamp-hidden"
       }`}
       aria-label={`Guardrail ${result.toLowerCase()}`}

@@ -35,14 +35,24 @@ body {
   color: var(--text);
 }
 
+:focus-visible {
+  outline: 2px solid var(--blue-signal);
+  outline-offset: 3px;
+}
+
 @keyframes guardrail-stamp-in {
   0% {
     opacity: 0;
-    transform: rotate(-4deg) scale(0.78);
+    transform: translateY(10px) rotate(-7deg) scale(0.72);
+    filter: blur(2px);
   }
-  65% {
+  62% {
     opacity: 1;
-    transform: rotate(-4deg) scale(1.04);
+    transform: translateY(-2px) rotate(-3deg) scale(1.06);
+    filter: blur(0);
+  }
+  80% {
+    transform: translateY(0) rotate(-4.6deg) scale(0.98);
   }
   100% {
     opacity: 1;
@@ -51,10 +61,18 @@ body {
 }
 
 .guardrail-stamp-enter {
-  animation: guardrail-stamp-in 520ms cubic-bezier(0.22, 1.32, 0.36, 1) both;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity, filter;
+  animation: guardrail-stamp-in 620ms cubic-bezier(0.22, 1.32, 0.36, 1) both;
 }
 
 .guardrail-stamp-hidden {
   opacity: 0;
-  transform: rotate(-4deg) scale(0.78);
+  transform: translateY(10px) rotate(-7deg) scale(0.72);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guardrail-stamp-enter {
+    animation: none;
+  }
 }

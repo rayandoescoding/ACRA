@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { ApiError } from "@/lib/api-client";
 import { saveToken } from "@/lib/token-storage";
@@ -22,9 +23,12 @@ export default function LoginPage() {
     try {
       const token = await AuthService.login({ email, password });
       saveToken(token.access_token);
+      toast.success("Operator access verified.");
       router.replace("/");
     } catch (caughtError) {
-      setError(caughtError instanceof ApiError ? caughtError.message : "Unable to sign in. Please try again.");
+      const message = caughtError instanceof ApiError ? caughtError.message : "Unable to sign in. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -32,7 +36,7 @@ export default function LoginPage() {
 
   return (
     <main className="grid min-h-screen place-items-center bg-bg px-5 py-10">
-      <section className="w-full max-w-md border border-hairline bg-panel p-6 sm:p-8" aria-labelledby="login-title">
+      <section className="w-full max-w-md border border-hairline bg-panel p-6 shadow-2xl sm:p-8" aria-labelledby="login-title">
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center border border-teal bg-teal-dim font-mono text-sm font-bold text-teal">A</span>
           <div>
@@ -54,7 +58,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 w-full border border-hairline bg-bg px-3 py-2.5 text-sm text-text outline-none transition-colors placeholder:text-text-faint focus:border-blue-signal"
+              className="mt-2 w-full border border-hairline bg-bg px-3 py-2.5 text-sm text-text outline-none transition-colors placeholder:text-text-faint focus:border-blue-signal focus:bg-panel-raised"
               autoComplete="email"
               required
             />
@@ -66,7 +70,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full border border-hairline bg-bg px-3 py-2.5 text-sm text-text outline-none transition-colors placeholder:text-text-faint focus:border-blue-signal"
+              className="mt-2 w-full border border-hairline bg-bg px-3 py-2.5 text-sm text-text outline-none transition-colors placeholder:text-text-faint focus:border-blue-signal focus:bg-panel-raised"
               autoComplete="current-password"
               required
             />

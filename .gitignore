@@ -6,10 +6,14 @@ venv/
 .venv/
 
 .env
+.env.*
+!.env.example
+!.env.production.example
 
 .vscode/
 
 *.log
+*.tsbuildinfo
 
 .pytest_cache/
 .mypy_cache/
