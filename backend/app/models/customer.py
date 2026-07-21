@@ -43,10 +43,13 @@ class Customer(Base):
     )
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     tier: Mapped[CustomerTier] = mapped_column(
-        Enum(CustomerTier),
-        default=CustomerTier.STANDARD,
-        nullable=False,
-    )
+    Enum(
+        CustomerTier,
+        values_callable=lambda x: [e.value for e in x],
+    ),
+    default=CustomerTier.STANDARD,
+    nullable=False,
+)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
